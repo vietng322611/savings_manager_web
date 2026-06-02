@@ -3,24 +3,20 @@ from decimal import Decimal
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.db.models import Q
-from django.shortcuts import get_object_or_404
 
-from dashboard.decorators import customer_required, employee_required
+from dashboard.decorators import customer_required
 from dashboard.flash import flash_success
 from dashboard.utils import get_parameter
 from savings.forms import (
     SavingPlanCreateForm,
     SavingPlanActionForm,
 )
-from savings.models import Transaction
 from savings.services import (
-    approve_transaction,
     create_saving_plan,
     deposit,
     get_active_saving_types,
     get_plan_by_id,
     get_plans_by_user,
-    reject_transaction,
     withdraw,
 )
 
@@ -93,23 +89,3 @@ def saving_plan_create(request):
         "min_initial_deposit": min_initial_deposit,
         "customer": request.user.customer,
     })
-
-
-@employee_required
-def employee_approve_transaction(request, transaction_id):
-    if request.method != "POST":
-        return redirect("/")
-
-    txn = get_object_or_404(Transaction, pk=transaction_id)
-    approve_transaction(txn)
-    return redirect(request.META.get("HTTP_REFERER", "/employees"))
-
-
-@employee_required
-def employee_reject_transaction(request, transaction_id):
-    if request.method != "POST":
-        return redirect("/")
-
-    txn = get_object_or_404(Transaction, pk=transaction_id)
-    reject_transaction(txn)
-    return redirect(request.META.get("HTTP_REFERER", "/employees"))

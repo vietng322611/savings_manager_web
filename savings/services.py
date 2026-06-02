@@ -376,9 +376,11 @@ def save_transaction(
     )
 
 
-def approve_transaction(txn: Transaction) -> Transaction:
+def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Transaction:
     """
-    Apply a pending transaction to the saving plan and mark it successful.
+    Process an employee decision for a pending transaction.
+    SUCCESS applies the transaction effects.
+    CANCELED rejects it without changing balances.
     """
     with transaction.atomic():
         txn = (
@@ -388,6 +390,18 @@ def approve_transaction(txn: Transaction) -> Transaction:
         )
         if txn.status != TransactionStatus.PENDING:
             return txn
+
+        if new_status == TransactionStatus.CANCELED:
+            txn.status = TransactionStatus.CANCELED
+            txn.save(update_fields=["status"])
+            if txn.transaction_type == TransactionType.OPEN:
+                saving_plan = txn.saving_plan
+                saving_plan.status = SavingPlanStatus.CLOSED
+                saving_plan.save(update_fields=["status"])
+            return txn
+
+        if new_status != TransactionStatus.SUCCESS:
+            raise ValueError("Unsupported transaction status")
 
         saving_plan = txn.saving_plan
         saving_plan.refresh_from_db()
@@ -468,14 +482,9 @@ def approve_transaction(txn: Transaction) -> Transaction:
         return txn
 
 
-def reject_transaction(txn: Transaction) -> Transaction:
-    with transaction.atomic():
-        txn = Transaction.objects.select_for_update().select_related("saving_plan").get(pk=txn.pk)
-        if txn.status == TransactionStatus.PENDING:
-            if txn.transaction_type == TransactionType.OPEN:
-                saving_plan = txn.saving_plan
-                saving_plan.status = SavingPlanStatus.CLOSED
-                saving_plan.save(update_fields=["status"])
-            txn.status = TransactionStatus.CANCELED
-            txn.save(update_fields=["status"])
-        return txn
+def approve_transaction(txn: Transaction) -> Transaction:
+    return process_transaction(txn, TransactionStatus.SUCCESS)
+
+
+def cancel_transaction(txn: Transaction) -> Transaction:
+    return process_transaction(txn, TransactionStatus.CANCELED)

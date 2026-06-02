@@ -4,7 +4,7 @@ from django.utils.dateparse import parse_date
 from django.utils.timezone import now
 
 from savings.models import SavingPlan, SavingType, Transaction, TransactionStatus
-from savings.services import get_statistics
+from savings.services import get_statistics, process_transaction as process_saving_transaction
 from users.models import CustomUser
 
 def get_dashboard_reports():
@@ -130,7 +130,7 @@ def search_transactions(query="", transaction_type="", transaction_status=""):
     return transactions
 
 def process_transaction(transaction: Transaction, new_status: TransactionStatus):
-    pass
+    return process_saving_transaction(transaction, new_status)
 
 def build_report_context(report_type, date_value, month_value):
     today = now().date()
