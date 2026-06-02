@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Saving Plan Manager{% endblock %}</title>
+
+    <!-- Link CSS -->
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="topbar">
+        <div class="left-section">
+            <a href="{% url 'profile' %}" class="app-name">Saving Plan Manager</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'profile' %}" class="nav-button">Profile</a>
+            <a href="{% url 'saving_plans' %}" class="nav-button">Saving Plans</a>
+            <a href="{% url 'saving_plan_create' %}" class="nav-button">New Saving Plan</a>
+            {% endif %}
+        </div>
+
+        <div class="right-section">
+            {% if user.is_authenticated %}
+                <div class="user-menu">
+                    <a href="#" class="nav-login">{{ user.email }}</a>
+
+                    <div class="dropdown">
+                        <a href="{% url 'profile' %}">Profile</a>
+                        <a href="{% url 'account_logout' %}">Logout</a>
+                        {% if user.is_employee %}
+                        <a href="{% url 'employee_dashboard' %}">Employee Page</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <a href="{% url 'account_login' %}" class="nav-login">Login</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <main>
+        {% if flashes %}
+        <div class="messages">
+            {% for message in flashes %}
+            <div class="message {{ message.level }}">
+                {{ message.text }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}
+        {% endblock %}
+    </main>
+
+</body>
+</html>

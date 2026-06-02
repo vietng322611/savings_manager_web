@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'savings/savings.css' %}">
+<link rel="stylesheet" href="{% static 'savings/saving_detail.css' %}">
+<link rel="stylesheet" href="{% static 'savings/saving_create.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <aside class="sidebar card">
+        <h2>Saving Types</h2>
+        <div class="sidebar-meta">
+            Available Saving Products
+        </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for saving_type in saving_types %}
+                <tr>
+                    <td>{{ saving_type.name }}</td>
+                    <td>{{ saving_type.interest_rate|floatformat:2 }}%</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="empty-state">
+                        No saving types available.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="sidebar-actions">
+            <a href="{% url 'saving_plans' %}">Back to Saving Plans</a>
+        </div>
+    </aside>
+
+    <div class="content">
+        <section class="card">
+            <div class="section-header">
+                <h3>Personal Information</h3>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">Full Name</div>
+                    <div class="detail-value">{{ customer.full_name }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Citizen ID</div>
+                    <div class="detail-value">{{ customer.citizen_id }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Address</div>
+                    <div class="detail-value">{{ customer.address }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Email</div>
+                    <div class="detail-value">{{ customer.user.email }}</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="section-header">
+                <h3>Create Saving Plan</h3>
+            </div>
+
+            <form method="post" id="create-plan-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_saving_type">Saving Type</label>
+                    <select id="id_saving_type" name="saving_type" required>
+                        <option value="">Select Saving Type</option>
+
+                        {% for saving_type in saving_types %}
+                        <option
+                            value="{{ saving_type.id }}"
+                            data-min-deposit="{{ saving_type.min_initial_deposit }}"
+                        >
+                            {{ saving_type.name }}
+                            ({{ saving_type.interest_rate|floatformat:2 }}%)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_initial_balance">Initial Balance</label>
+                    <input
+                        type="number"
+                        id="id_initial_balance"
+                        name="initial_balance"
+                        min="0"
+                        step="0.01"
+                        required
+                    >
+                    <small id="min-deposit-info">
+                        Minimum Initial Balance: {{ min_initial_deposit }}
+                    </small>
+                </div>
+
+                <button type="submit" class="action-button">
+                    Create Saving Plan
+                </button>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}

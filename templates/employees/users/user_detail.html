@@ -1,0 +1,133 @@
+{% extends "employees/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'employees/user_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+
+{% if flash %}
+<div class="messages">
+    <div class="message {{ flash.level }}">
+        {{ flash.text }}
+    </div>
+</div>
+{% endif %}
+
+<div class="user-layout">
+    <aside class="user-sidebar card">
+        <div class="avatar">
+            {{ selected_user.email|first|upper }}
+        </div>
+        <h2>{{ selected_user.email }}</h2>
+        <div class="badges">
+            {% if selected_user.is_customer %}
+            <span class="badge">Customer</span>
+            {% endif %}
+
+            {% if selected_user.is_employee %}
+            <span class="badge employee">
+                {{ selected_user.employee.get_role_display }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="sidebar-actions">
+            <a href="{% url 'manage_users' %}">Back to Users</a>
+        </div>
+    </aside>
+
+    <div class="user-content">
+        {% if customer_form %}
+        <section class="card">
+            <div class="section-header">
+                <h3>Customer Information</h3>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="customer">
+
+                {{ customer_form.as_p }}
+
+                {% if request.user.employee.can_edit %}
+                <div class="form-actions">
+                    <button type="submit">
+                        Save Customer Information
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+        </section>
+        {% endif %}
+
+        <section class="card">
+            <div class="section-header">
+                <h3>Employee Access</h3>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="employee">
+
+                {% if employee_form.non_field_errors %}
+                {{ employee_form.non_field_errors }}
+                {% endif %}
+
+                <div class="checkbox-group">
+                    <div class="checkbox-field">
+                        {{ employee_form.hasRead }}
+                        <label for="{{ employee_form.hasRead.id_for_label }}">
+                            Read Access
+                        </label>
+                    </div>
+
+                    <div class="checkbox-field">
+                        {{ employee_form.hasWrite }}
+                        <label for="{{ employee_form.hasWrite.id_for_label }}">
+                            Write Access
+                        </label>
+                    </div>
+                </div>
+
+                {% if request.user.employee.can_edit %}
+                <div class="form-actions">
+                    <button
+                        type="submit"
+                        name="action"
+                        value="remove"
+                        class="danger-button"
+                    >
+                        {% if selected_user.is_customer %}
+                        Remove Employee Access
+                        {% else %}
+                        Remove User
+                        {% endif %}
+                    </button>
+
+                    <button
+                        type="submit"
+                        name="action"
+                        value="save"
+                    >
+                        Save Changes
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+        </section>
+    </div>
+</div>
+
+<script>
+const hasRead = document.getElementById('id_hasRead');
+const hasWrite = document.getElementById('id_hasWrite');
+
+hasRead.onclick = (e) => {
+    if (!hasRead.checked) hasWrite.checked = false;
+    if (hasWrite.checked) e.preventDefault();
+};
+hasWrite.onclick = (e) => {
+    if (hasWrite.checked) hasRead.checked = true;
+};
+</script>
+{% endblock %}

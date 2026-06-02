@@ -1,0 +1,68 @@
+{% extends "employees/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'employees/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <div class="page-header">
+        <div>
+            <h1>Dashboard</h1>
+        </div>
+    </div>
+
+    <section class="report-grid">
+        <article class="report-card">
+            <div class="report-card__header">
+                <div>
+                    <p class="report-card__eyebrow">Today</p>
+                    <h2>Deposit / Withdraw</h2>
+                </div>
+            </div>
+
+            <div class="report-values">
+                <div class="report-value">
+                    <span>Deposits</span>
+                    <strong>{{ deposit_report.deposits|floatformat:2 }}</strong>
+                </div>
+                <div class="report-value">
+                    <span>Withdrawals</span>
+                    <strong>{{ deposit_report.withdrawals|floatformat:2 }}</strong>
+                </div>
+            </div>
+
+            <div class="report-difference {% if deposit_report.difference >= 0 %}is-positive{% else %}is-negative{% endif %}">
+                <span>Difference</span>
+                <strong>{{ deposit_report.difference|floatformat:2 }}</strong>
+            </div>
+        </article>
+
+        <article class="report-card">
+            <div class="report-card__header">
+                <div>
+                    <p class="report-card__eyebrow">This month</p>
+                    <h2>Saving Plans</h2>
+                </div>
+            </div>
+
+            <div class="report-values">
+                <div class="report-value">
+                    <span>Opened</span>
+                    <strong>{{ saving_plan_report.opened }}</strong>
+                </div>
+                <div class="report-value">
+                    <span>Closed</span>
+                    <strong>{{ saving_plan_report.closed }}</strong>
+                </div>
+            </div>
+
+            <div class="report-difference {% if saving_plan_report.difference >= 0 %}is-positive{% else %}is-negative{% endif %}">
+                <span>Difference</span>
+                <strong>{{ saving_plan_report.difference }}</strong>
+            </div>
+        </article>
+    </section>
+</div>
+{% endblock %}

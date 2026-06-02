@@ -1,0 +1,63 @@
+.container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.sidebar {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sidebar h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.sidebar-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.sidebar-stat span {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sidebar-stat strong {
+    color: #111827;
+    font-size: 24px;
+}
+
+.sidebar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 8px;
+}
+
+.sidebar-actions a {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.content .card {
+    margin-bottom: 0;
+}

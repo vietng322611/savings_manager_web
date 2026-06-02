@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/login.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <h2>Verify Your Email</h2>
+
+        <p>
+            We’ve sent a verification link to your email address.
+        </p>
+
+        <p>
+            Please check your inbox and click the link to activate your account.
+        </p>
+
+        <div class="login-links">
+            <a href="{% url 'account_login' %}">Back to login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

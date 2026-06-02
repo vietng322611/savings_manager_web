@@ -1,0 +1,119 @@
+{% extends "employees/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'employees/user_create.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Create User</h1>
+        <p>Create customer and employee accounts.</p>
+    </div>
+</div>
+
+<form method="post">
+    <div class="user-layout">
+        {% csrf_token %}
+        <aside class="user-sidebar card">
+            <div class="section-title">Access Settings</div>
+            <div class="checkbox-group">
+                <div class="checkbox-field">
+                    {{ form.is_customer }}
+                    <label for="{{ form.is_customer.id_for_label }}">
+                        Customer
+                    </label>
+                </div>
+                <div class="checkbox-field">
+                    {{ form.has_read }}
+                    <label for="{{ form.has_read.id_for_label }}">
+                        Employee Read Access
+                    </label>
+                </div>
+                <div class="checkbox-field">
+                    {{ form.has_write }}
+                    <label for="{{ form.has_write.id_for_label }}">
+                        Employee Write Access
+                    </label>
+                </div>
+            </div>
+        </aside>
+    
+        <section class="card user-form">
+            {% if form.non_field_errors %}
+                <div class="form-error">
+                    {{ form.non_field_errors.0 }}
+                </div>
+            {% endif %}
+            <div class="section-title">Account Information</div>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label>Email</label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    {{ form.password1 }}
+                    {{ form.password1.errors }}
+                    {% if form.password1.help_text %}
+                        <div class="form-help">
+                            {{ form.password1.help_text|safe }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    {{ form.password2 }}
+                    {{ form.password2.errors }}
+                </div>
+            </div>
+            <div class="section-divider"></div>
+            <div id="customer_fields" class="customer-fields" style="display: none">
+                <div class="section-title">Customer Information</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        {{ form.full_name }}
+                        {{ form.full_name.errors }}
+                    </div>
+                    <div class="form-group">
+                        <label>Citizen ID</label>
+                        {{ form.citizen_id }}
+                        {{ form.citizen_id.errors }}
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Address</label>
+                        {{ form.address }}
+                        {{ form.address.errors }}
+                    </div>
+                </div>
+                <div class="section-divider"></div>
+            </div>
+            <div class="form-actions">
+                <button type="submit">
+                    Create User
+                </button>
+            </div>
+        </section>
+    </div>
+</form>
+<script>
+const customerCheckbox = document.getElementById("id_is_customer");
+const customerFields = document.getElementById("customer_fields");
+const hasRead = document.getElementById("id_has_read");
+const hasWrite = document.getElementById("id_has_write");
+
+customerCheckbox.onclick = (_) => {
+    customerFields.style.display = customerCheckbox.checked ? "flex" : "none";
+}
+hasRead.onclick = (e) => {
+    if (!hasRead.checked) hasWrite.checked = false;
+    if (hasWrite.checked) e.preventDefault();
+};
+hasWrite.onclick = (_) => {
+    if (hasWrite.checked) hasRead.checked = true;
+};
+</script>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "employees/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'employees/users.css' %}">
+{% endblock %}
+
+{% block content %}
+{% if flash %}
+<div class="messages">
+    <div class="message {{ flash.level }}">
+        {{ flash.text }}
+    </div>
+</div>
+{% endif %}
+
+<div class="page-header">
+    <div>
+        <h1>Users</h1>
+        <p>Manage customer and employee accounts.</p>
+    </div>
+
+    {% if request.user.employee.can_edit %}
+    <a href="{% url 'user_create' %}" class="create-button">Add User</a>
+    {% endif %}
+</div>
+
+<section class="card">
+    <form method="get" class="search-form">
+        <input
+            type="text"
+            name="search"
+            placeholder="Search by email, name, citizen ID..."
+            value="{{ request.GET.search }}"
+        >
+        <select name="type">
+            <option value="">All Users</option>
+            <option value="customer"
+                {% if request.GET.type == "customer" %}
+                selected
+                {% endif %}
+            >
+                Customers
+            </option>
+            <option value="employee"
+                {% if request.GET.type == "employee" %}
+                selected
+                {% endif %}
+            >
+                Employees
+            </option>
+        </select>
+        <button type="submit">
+            Search
+        </button>
+    </form>
+</section>
+
+<section class="card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Customer</th>
+                <th>Employee</th>
+                <th>Role</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>
+                    <div class="user-email">
+                        {{ user.email }}
+                    </div>
+                </td>
+                <td>
+                    {% if user.is_customer %}
+                    <span class="badge">
+                        Yes
+                    </span>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.is_employee %}
+                    <span class="badge employee">
+                        Yes
+                    </span>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.is_employee %}
+                    <span class="badge employee">
+                        {{ user.employee.get_role_display }}
+                    </span>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    <a
+                        href="{% url 'manage_user_profile' user.id %}"
+                        class="action-button"
+                    >
+                        Manage
+                    </a>
+                </td>
+
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="table-empty">
+                    No users found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

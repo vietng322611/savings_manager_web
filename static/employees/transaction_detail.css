@@ -1,0 +1,53 @@
+.sidebar-actions form {
+    margin: 0;
+}
+
+.btn-approve,
+.btn-cancel {
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-approve {
+    background: #16a34a;
+    color: white;
+}
+
+.btn-approve:hover {
+    background: #15803d;
+}
+
+.btn-cancel {
+    background: #dc2626;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #b91c1c;
+}
+
+.sidebar-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.sidebar-label {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sidebar-value {
+    color: #111827;
+    font-size: 15px;
+    font-weight: 700;
+}

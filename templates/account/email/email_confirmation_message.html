@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            max-width: 500px;
+            margin: auto;
+            text-align: center;
+        }
+        .button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 20px;
+            background-color: #4CAF50;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Verify your email</h2>
+
+```
+    <p>Thanks for signing up! Please confirm your email address.</p>
+
+    <a href="{{ activate_url }}" class="button">
+        Confirm Email
+    </a>
+
+    <p>If the button doesn't work, copy this link:</p>
+    <p>{{ activate_url }}</p>
+
+    <div class="footer">
+        <p>If you didn’t create an account, you can ignore this email.</p>
+    </div>
+</div>
+```
+
+</body>
+</html>

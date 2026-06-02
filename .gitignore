@@ -1,0 +1,36 @@
+# Python bytecode
+*.py[cod]
+*$py.class
+__pycache__/
+*.so
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# Static and Media files (uncomment if you want to ignore collected static files)
+# /staticfiles/
+# /media/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/

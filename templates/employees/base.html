@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Employee Page{% endblock %}</title>
+
+    <!-- Link CSS -->
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="topbar">
+        <div class="left-section">
+            <a href="{% url 'employee_dashboard' %}" class="app-name">Employee Page</a>
+            <a href="{% url 'manage_users' %}" class="nav-button">Users</a>
+            <a href="{% url 'manage_saving_plans' %}" class="nav-button">Savings</a>
+            <a href="{% url 'manage_saving_types' %}" class="nav-button">Saving Types</a>
+            <a href="{% url 'manage_transactions' %}" class="nav-button">Transactions</a>
+            <a href="{% url 'manage_reports' %}" class="nav-button">Reports</a>
+        </div>
+
+        <div class="right-section">
+            <div class="user-menu">
+                <a href="#" class="nav-login">{{ user.email }}</a>
+
+                <div class="dropdown">
+                    <a href="{% url 'employee_dashboard' %}">Dashboard</a>
+                    <a href="{% url 'account_logout' %}">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        {% if flashes %}
+        <div class="messages">
+            {% for message in flashes %}
+            <div class="message {{ message.level }}">
+                {{ message.text }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html>

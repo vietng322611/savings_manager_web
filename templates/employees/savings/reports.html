@@ -1,0 +1,137 @@
+{% extends "employees/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'employees/reports.css' %}">
+{% endblock %}
+
+{% block content %}
+
+{% if flash %}
+<div class="messages">
+    <div class="message {{ flash.level }}">
+        {{ flash.text }}
+    </div>
+</div>
+{% endif %}
+
+<div class="reports-page">
+    <div class="page-header">
+        <div>
+            <h1>Reports</h1>
+        </div>
+    </div>
+
+    <section class="card">
+        <form method="get" class="report-form">
+            <div class="form-field">
+                <label for="report">Report</label>
+                <select id="report" name="report">
+                    <option value="cash" {% if selected_report == "cash" %}selected{% endif %}>
+                        Deposit / Withdraw
+                    </option>
+                    <option value="plans" {% if selected_report == "plans" %}selected{% endif %}>
+                        Opened / Closed Saving Plans
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-field" id="date-field" {% if selected_report != "cash" %}style="display:none;"{% endif %}>
+                <label for="date">Date</label>
+                <input
+                    id="date"
+                    type="date"
+                    name="date"
+                    value="{{ selected_date|date:'Y-m-d' }}"
+                    max="{{ today|date:'Y-m-d' }}"
+                >
+            </div>
+
+            <div class="form-field" id="month-field" {% if selected_report != "plans" %}style="display:none;"{% endif %}>
+                <label for="month">Month</label>
+                <input
+                    id="month"
+                    type="month"
+                    name="month"
+                    value="{{ selected_month }}"
+                    max="{{ current_month }}"
+                >
+            </div>
+
+            <button type="submit" class="action-button">Show report</button>
+        </form>
+    </section>
+
+    <section class="report-grid">
+        {% if report.type == "cash" %}
+        <article class="report-card">
+            <div class="report-card__header">
+                <div>
+                    <p class="report-card__eyebrow">{{ report.label|date:"Y-m-d" }}</p>
+                    <h2>Deposit / Withdraw</h2>
+                </div>
+            </div>
+
+            <div class="report-values">
+                <div class="report-value">
+                    <span>Deposits</span>
+                    <strong>{{ report.deposits|floatformat:2 }}</strong>
+                </div>
+                <div class="report-value">
+                    <span>Withdrawals</span>
+                    <strong>{{ report.withdrawals|floatformat:2 }}</strong>
+                </div>
+            </div>
+
+            <div class="report-difference {% if report.difference >= 0 %}is-positive{% else %}is-negative{% endif %}">
+                <span>Difference</span>
+                <strong>{{ report.difference|floatformat:2 }}</strong>
+            </div>
+        </article>
+        {% else %}
+        <article class="report-card">
+            <div class="report-card__header">
+                <div>
+                    <p class="report-card__eyebrow">{{ report.label }}</p>
+                    <h2>Saving Plans</h2>
+                </div>
+            </div>
+
+            <div class="report-values">
+                <div class="report-value">
+                    <span>Opened</span>
+                    <strong>{{ report.opened }}</strong>
+                </div>
+                <div class="report-value">
+                    <span>Closed</span>
+                    <strong>{{ report.closed }}</strong>
+                </div>
+            </div>
+
+            <div class="report-difference {% if report.difference >= 0 %}is-positive{% else %}is-negative{% endif %}">
+                <span>Difference</span>
+                <strong>{{ report.difference }}</strong>
+            </div>
+        </article>
+        {% endif %}
+    </section>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const reportSelect = document.getElementById("report");
+    const dateField = document.getElementById("date-field");
+    const monthField = document.getElementById("month-field");
+
+    function toggleFields() {
+        const isCash = reportSelect.value === "cash";
+        dateField.style.display = isCash ? "block" : "none";
+        monthField.style.display = isCash ? "none" : "block";
+    }
+
+    if (reportSelect) {
+        reportSelect.addEventListener("change", toggleFields);
+        toggleFields();
+    }
+});
+</script>
+{% endblock %}

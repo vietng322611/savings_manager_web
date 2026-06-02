@@ -1,0 +1,146 @@
+{% extends "employees/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'savings/savings.css' %}">
+{% endblock %}
+
+{% block content %}
+
+{% if flash %}
+<div class="messages">
+    <div class="message {{ flash.level }}">
+        {{ flash.text }}
+    </div>
+</div>
+{% endif %}
+
+<div class="page-header">
+    <div>
+        <h1>Saving Types</h1>
+        <p>Manage saving products and interest rates.</p>
+    </div>
+
+    <a href="{% url 'saving_type_create' %}" class="action-button">
+        Create Saving Type
+    </a>
+</div>
+
+<section class="card">
+    <form method="get" class="search-form">
+        <input
+            type="text"
+            name="search"
+            placeholder="Search by saving type name..."
+            value="{{ request.GET.search }}"
+        >
+
+        <select name="type">
+            <option value="">All Types</option>
+            <option value="flexible"
+                {% if request.GET.type == "flexible" %}
+                    selected
+                {% endif %}
+            >
+                Flexible
+            </option>
+            <option value="fixed"
+                {% if request.GET.type == "fixed" %}
+                    selected
+                {% endif %}
+            >
+                Fixed-Term
+            </option>
+        </select>
+        <select name="status">
+            <option value="">All Status</option>
+            <option value="active"
+                {% if request.GET.status == "active" %}
+                    selected
+                {% endif %}
+            >
+                Active
+            </option>
+            <option value="inactive"
+                {% if request.GET.status == "inactive" %}
+                    selected
+                {% endif %}
+            >
+                Inactive
+            </option>
+        </select>
+
+        <button type="submit">Search</button>
+
+        {% if request.GET.search or request.GET.type or request.GET.status %}
+        <a href="{% url 'manage_saving_types' %}" class="btn-secondary">
+            Reset
+        </a>
+        {% endif %}
+    </form>
+</section>
+
+<section class="card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Duration</th>
+                <th>Interest Rate</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for saving_type in saving_types %}
+            <tr>
+                <td>
+                    <span class="plan-id">
+                        {{ saving_type.name }}
+                    </span>
+                </td>
+                <td>
+                    {% if saving_type.is_flexible %}
+                        Flexible
+                    {% else %}
+                        Fixed-Term
+                    {% endif %}
+                </td>
+                <td>
+                    {% if saving_type.is_flexible %}
+                        -
+                    {% else %}
+                        {{ saving_type.duration_months }} months
+                    {% endif %}
+                </td>
+                <td>
+                    {{ saving_type.interest_rate|floatformat:2 }}%
+                </td>
+                <td>
+                    {% if saving_type.is_active %}
+                        <span class="badge active">Active</span>
+                    {% else %}
+                        <span class="badge closed">Inactive</span>
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    <a
+                        href="{% url 'manage_saving_type_detail' saving_type.id %}"
+                        class="action-button"
+                    >
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="table-empty">
+                    No saving types found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

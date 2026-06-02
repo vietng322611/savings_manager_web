@@ -1,0 +1,5 @@
+Please confirm your email:
+
+{{ activate_url }}
+
+If you did not create an account, ignore this email.
