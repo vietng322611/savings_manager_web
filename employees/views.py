@@ -1,9 +1,11 @@
+from django.contrib import messages
+
 from django.http import HttpResponseBadRequest, HttpResponseServerError
 from django.shortcuts import render, redirect
 from django.db import transaction
 
 from dashboard.decorators import employee_required, employee_write_required
-from dashboard.flash import flash_success, flash_error
+from dashboard.flash import flash_success
 from savings.models import TransactionType, TransactionStatus
 from users.forms import InformationChangeForm
 from .forms import EmployeeChangeForm, UserCreateForm, SavingTypeEditForm
@@ -203,21 +205,44 @@ def manage_transaction_detail(request, transaction_id):
     selected_transaction = get_transaction_detail(transaction_id)
 
     if request.method == "POST":
+        action = request.POST.get("action")
+
         try:
-            action = request.POST.get("action")
             match action:
                 case "approve":
-                    process_transaction(selected_transaction, TransactionStatus.SUCCESS)
-                    flash_success(request, "Transaction approved successfully.")
+                    process_transaction(
+                        selected_transaction,
+                        TransactionStatus.SUCCESS
+                    )
+
+                    flash_success(
+                        request,
+                        "Transaction approved successfully."
+                    )
 
                 case "cancel":
-                    process_transaction(selected_transaction, TransactionStatus.CANCELED)
-                    flash_success(request, "Transaction cancelled successfully.")
+                    process_transaction(
+                        selected_transaction,
+                        TransactionStatus.CANCELED
+                    )
+
+                    flash_success(
+                        request,
+                        "Transaction cancelled successfully."
+                    )
+
         except ValueError as e:
-            flash_error(request, str(e))
+            messages.error(request, str(e))
 
-        return redirect("manage_transaction_detail", transaction_id=selected_transaction.id)
+        return redirect(
+            "manage_transaction_detail",
+            transaction_id=selected_transaction.id
+        )
 
-    return render(request,"employees/savings/transaction_detail.html",{
-        "transaction": selected_transaction,
-    })
+    return render(
+        request,
+        "employees/savings/transaction_detail.html",
+        {
+            "transaction": selected_transaction,
+        }
+    )

@@ -31,17 +31,37 @@
     <div class="content">
         {% if saving_plan.status != "PENDING" %}
         <section class="card">
-            <div class="section-header"><h3>Deposit / Withdraw</h3></div>
+            <div class="section-header">
+                <h3>Deposit / Withdraw</h3>
+            </div>
+
+            {% if action_form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in action_form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             <form method="post" class="search-form">
                 {% csrf_token %}
                 <div class="field-inline amount-field">
-                    <label for="{{ action_form.amount.id_for_label }}">Amount:</label>
+                    <label for="{{ action_form.amount.id_for_label }}">
+                        Amount:
+                    </label>
                     {{ action_form.amount }}
                 </div>
+
                 <div class="field-inline">
                     {{ action_form.action }}
                 </div>
-                <button type="submit" class="action-button compact-button">Submit</button>
+
+                <button
+                    type="submit"
+                    class="action-button compact-button"
+                >
+                    Submit
+                </button>
             </form>
         </section>
         {% endif %}

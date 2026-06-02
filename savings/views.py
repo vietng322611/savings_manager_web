@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 from django.db.models import Q
 
 from dashboard.decorators import customer_required
-from dashboard.flash import flash_success, flash_error
+from dashboard.flash import flash_success
 from dashboard.utils import get_parameter
 from savings.forms import (
     SavingPlanCreateForm,
@@ -38,43 +38,79 @@ def saving_plans(request):
 @customer_required
 def saving_plan_detail(request, plan_id):
     saving_plan = get_plan_by_id(plan_id)
+
     if saving_plan is None:
-        return Http404("Saving plan not found")
+        raise Http404("Saving plan not found")
 
     action_form = SavingPlanActionForm(prefix="action")
 
     if request.method == "POST":
-        action_form = SavingPlanActionForm(request.POST, prefix="action")
+        action_form = SavingPlanActionForm(
+            request.POST,
+            prefix="action"
+        )
+
         if action_form.is_valid():
             try:
                 action = action_form.cleaned_data["action"]
                 amount = action_form.cleaned_data["amount"]
+
                 if action == "deposit":
                     deposit(saving_plan, amount)
-                    flash_success(request, f"Created request to deposit {amount}")
+                    flash_success(
+                        request,
+                        f"Created request to deposit {amount}"
+                    )
                 else:
                     withdraw(saving_plan, amount)
-                    flash_success(request, f"Created request to withdraw {amount}")
-            except ValueError as e:
-                flash_error(request, str(e))
+                    flash_success(
+                        request,
+                        f"Created request to withdraw {amount}"
+                    )
 
-            return redirect("saving_plan_detail", plan_id=plan_id)
+                return redirect(
+                    "saving_plan_detail",
+                    plan_id=plan_id
+                )
+
+            except ValueError as e:
+                action_form.add_error(None, str(e))
 
     transactions = saving_plan.transactions.order_by("-timestamp")
-    return render(request, "savings/saving_plan_detail.html", {
-        "saving_plan": saving_plan,
-        "transactions": transactions,
-        "action_form": action_form,
-    })
+
+    return render(
+        request,
+        "savings/saving_plan_detail.html",
+        {
+            "saving_plan": saving_plan,
+            "transactions": transactions,
+            "action_form": action_form,
+        }
+    )
 
 @customer_required
 def saving_plan_create(request):
     saving_types = get_active_saving_types()
-    min_initial_deposit = Decimal(get_parameter("min_initial_deposit", 1_000_000))
-    form = SavingPlanCreateForm(active_saving_types=saving_types, min_initial_deposit=min_initial_deposit)
+
+    min_initial_deposit = Decimal(
+        get_parameter(
+            "min_initial_deposit",
+            1_000_000
+        )
+    )
+
+    form = SavingPlanCreateForm(
+        active_saving_types=saving_types,
+        min_initial_deposit=min_initial_deposit,
+    )
 
     if request.method == "POST":
-        form = SavingPlanCreateForm(request.POST, active_saving_types=saving_types, min_initial_deposit=min_initial_deposit)
+        form = SavingPlanCreateForm(
+            request.POST,
+            active_saving_types=saving_types,
+            min_initial_deposit=min_initial_deposit,
+        )
+
         if form.is_valid():
             try:
                 create_saving_plan(
@@ -83,14 +119,26 @@ def saving_plan_create(request):
                     initial_balance=form.cleaned_data["initial_balance"],
                 )
 
-                flash_success(request, "Created request to open new saving plan.")
-                return redirect("saving_plans")
-            except ValueError as e:
-                flash_error(request, str(e))
+                flash_success(
+                    request,
+                    "Created request to open new saving plan."
+                )
 
-    return render(request,"savings/saving_plan_create.html", {
-        "form": form,
-        "saving_types": saving_types,
-        "min_initial_deposit": min_initial_deposit,
-        "customer": request.user.customer,
-    })
+                return redirect("saving_plans")
+
+            except ValueError as e:
+                form.add_error(
+                    None,
+                    str(e)
+                )
+
+    return render(
+        request,
+        "savings/saving_plan_create.html",
+        {
+            "form": form,
+            "saving_types": saving_types,
+            "min_initial_deposit": min_initial_deposit,
+            "customer": request.user.customer,
+        }
+    )
