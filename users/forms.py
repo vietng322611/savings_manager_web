@@ -1,17 +1,26 @@
 from allauth.account.forms import SignupForm
 from django import forms
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
-from .models import Customer
+from .models import Customer, CustomUser
 
 class CustomSignupForm(SignupForm):
     full_name = forms.CharField(max_length=50)
     citizen_id = forms.CharField(max_length=12)
     address = forms.CharField(max_length=100)
 
+    def clean_email(self):
+        email = self.cleaned_data.get("email", "").strip().lower()
+        if CustomUser.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("This email is already registered.")
+        return email
+
     def save(self, request):
         with transaction.atomic():
-            user = super().save(request)
+            try:
+                user = super().save(request)
+            except IntegrityError:
+                raise forms.ValidationError({"email": "This email is already registered."})
 
             Customer.objects.create(
                 user=user,

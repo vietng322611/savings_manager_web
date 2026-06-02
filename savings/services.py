@@ -1,13 +1,21 @@
 from django.db import transaction
 from decimal import Decimal
 from datetime import date
-from django.db.models import Sum
+from django.db.models import F, Sum
 
 from dashboard.utils import get_parameter
 from django.db.models import QuerySet
 from django.utils.timezone import now
 
-from savings.models import SavingPlan, SavingType, SavingTypeRateHistory, Transaction, TransactionType
+from savings.models import (
+    SavingPlan,
+    SavingPlanStatus,
+    SavingType,
+    SavingTypeRateHistory,
+    Transaction,
+    TransactionStatus,
+    TransactionType,
+)
 from users.models import CustomUser, Customer
 
 
@@ -39,19 +47,23 @@ def create_saving_plan(
 
     with transaction.atomic():
         saving_plan = SavingPlan.objects.create(
-            balance=initial_balance,
+            balance=Decimal("0.00"),
             interest_rate=saving_type.interest_rate,
-            # Start accrual tracking on plan creation date for flexible plans.
-            interest_last_applied_on=now().date() if saving_type.is_flexible else None,
+            status=SavingPlanStatus.PENDING,
+            # Start accrual tracking only when the plan is approved.
+            interest_last_applied_on=None,
             maturity_date=maturity_date,
-            saving_type=saving_type, customer=customer)
+            saving_type=saving_type,
+            customer=customer,
+        )
 
         save_transaction(
             saving_plan,
             TransactionType.OPEN,
             Decimal("0.00"),
             initial_balance,
-            initial_balance
+            initial_balance,
+            status=TransactionStatus.PENDING,
         )
 
     return saving_plan
@@ -124,27 +136,24 @@ def deposit(saving_plan: SavingPlan, amount: Decimal):
 
     with transaction.atomic():
         saving_plan.refresh_from_db()
-        today = now().date()
+
+        if saving_plan.status != SavingPlanStatus.ACTIVE:
+            raise ValueError("Saving plan is not active yet")
 
         if not saving_plan.saving_type.is_flexible:
-            if saving_plan.maturity_date is None:
-                raise ValueError("Fixed-term saving plan is missing maturity date")
-            if today != saving_plan.maturity_date:
-                raise ValueError("Deposit only allowed on maturity date for fixed-term saving types")
-        else:
-            # For flexible saving plans, accrue pending interest first (using rate history).
-            apply_interest(saving_plan)
-        balance_before = saving_plan.balance
+            raise ValueError("Additional deposits are not allowed for fixed-term saving plans")
 
-        saving_plan.balance = balance_before + amount
-        saving_plan.save(update_fields=["balance"])
+        # Deposit requests are created first and must be approved by an employee.
+        balance_before = saving_plan.balance
+        balance_after = balance_before + amount
 
         save_transaction(
             saving_plan,
             TransactionType.DEPOSIT,
             balance_before,
             amount,
-            balance_before + amount
+            balance_after,
+            status=TransactionStatus.PENDING,
         )
 
 def withdraw(saving_plan: SavingPlan, amount: Decimal) -> Decimal:
@@ -157,13 +166,14 @@ def withdraw(saving_plan: SavingPlan, amount: Decimal) -> Decimal:
     calculate balance after maturity before withdrawal
     """
 
-    min_deposit_days_flexible = Decimal(get_parameter("min_deposit_days_flexible", 15))
+    min_deposit_days_flexible = int(get_parameter("min_deposit_days_flexible", 15))
 
     with transaction.atomic():
         saving_plan.refresh_from_db()
         today = now().date()
 
-        balance = apply_interest(saving_plan)
+        if saving_plan.status != SavingPlanStatus.ACTIVE:
+            raise ValueError("Saving plan is not active yet")
 
         if not saving_plan.saving_type.is_flexible: # fixed-term
             if saving_plan.maturity_date is None:
@@ -171,19 +181,21 @@ def withdraw(saving_plan: SavingPlan, amount: Decimal) -> Decimal:
             if today < saving_plan.maturity_date:
                 raise ValueError("Cannot withdraw before maturity")
 
+            balance = saving_plan.balance
             save_transaction(
                 saving_plan,
                 TransactionType.WITHDRAW,
                 balance,
                 balance,
-                Decimal("0.00")
+                Decimal("0.00"),
+                status=TransactionStatus.PENDING,
             )
-
-            # close saving plan after withdrawal
-            close_saving_plan(saving_plan)
 
             return balance
         else:
+            if saving_plan.start_date is None:
+                raise ValueError("Saving plan has no start date")
+
             # 15-day lock
             days_since_start = (today - saving_plan.start_date).days
             if days_since_start < min_deposit_days_flexible:
@@ -192,21 +204,19 @@ def withdraw(saving_plan: SavingPlan, amount: Decimal) -> Decimal:
             if amount > saving_plan.balance:
                 raise ValueError("Insufficient balance")
 
-            balance_after = balance - amount
-
-            saving_plan.balance = balance_after
-            saving_plan.save(update_fields=["balance"])
+            # Withdrawal requests are created first and must be approved by an employee.
+            # Interest is intentionally not applied until approval time.
+            balance_before = saving_plan.balance
+            balance_after = balance_before - amount
 
             save_transaction(
                 saving_plan,
                 TransactionType.WITHDRAW,
-                balance,
+                balance_before,
                 amount,
-                balance_after
+                balance_after,
+                status=TransactionStatus.PENDING,
             )
-
-            if balance_after == 0:
-                close_saving_plan(saving_plan)
 
             return amount
 
@@ -294,7 +304,7 @@ def change_saving_type_rate(
     return saving_type
 
 def get_statistics(period: str, saving_plan=None, date=None, month=None, year=None):
-    transactions = Transaction.objects.all()
+    transactions = Transaction.objects.filter(status=TransactionStatus.SUCCESS)
 
     if saving_plan is not None:
         transactions = transactions.filter(saving_plan=saving_plan)
@@ -313,10 +323,10 @@ def get_statistics(period: str, saving_plan=None, date=None, month=None, year=No
         if year:
             transactions = transactions.filter(timestamp__year=int(year))
 
-    total_open = transactions.filter(transaction_type="OPEN").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-    total_deposit = transactions.filter(transaction_type="DEPOSIT").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-    total_withdraw = transactions.filter(transaction_type="WITHDRAW").aggregate(total=Sum("amount"))["total"] or Decimal("0")
-    total_close = transactions.filter(transaction_type="CLOSE").aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    total_open = transactions.filter(transaction_type=TransactionType.OPEN).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    total_deposit = transactions.filter(transaction_type=TransactionType.DEPOSIT).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    total_withdraw = transactions.filter(transaction_type=TransactionType.WITHDRAW).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    total_close = transactions.filter(transaction_type=TransactionType.CLOSE).aggregate(total=Sum("amount"))["total"] or Decimal("0")
     total_income = total_open + total_deposit
     total_expense = total_withdraw + total_close
 
@@ -341,8 +351,8 @@ def get_statistics(period: str, saving_plan=None, date=None, month=None, year=No
         "total_deposit": total_deposit,
         "total_withdraw": total_withdraw,
         "total_close": total_close,
-        "opened_count": transactions.filter(transaction_type="OPEN").count(),
-        "closed_count": transactions.filter(transaction_type="CLOSE").count(),
+        "opened_count": transactions.filter(transaction_type=TransactionType.OPEN).count(),
+        "closed_count": transactions.filter(transaction_type=TransactionType.CLOSE).count(),
         "total_income": total_income,
         "total_expense": total_expense,
         "difference": total_income - total_expense
@@ -353,12 +363,128 @@ def save_transaction(
     transaction_type: TransactionType,
     balance_before: Decimal,
     amount: Decimal,
-    balance_after: Decimal
+    balance_after: Decimal,
+    status: TransactionStatus = TransactionStatus.SUCCESS,
 ):
-    Transaction.objects.create(
+    return Transaction.objects.create(
         saving_plan=saving_plan,
         transaction_type=transaction_type,
+        status=status,
         balance_before=balance_before,
         amount=amount,
         balance_after=balance_after
     )
+
+
+def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Transaction:
+    """
+    Process an employee decision for a pending transaction.
+    SUCCESS applies the transaction effects.
+    CANCELED rejects it without changing balances.
+    """
+    with transaction.atomic():
+        txn = (
+            Transaction.objects.select_for_update()
+            .select_related("saving_plan", "saving_plan__saving_type")
+            .get(pk=txn.pk)
+        )
+        if txn.status != TransactionStatus.PENDING:
+            return txn
+
+        if new_status == TransactionStatus.CANCELED:
+            txn.status = TransactionStatus.CANCELED
+            txn.save(update_fields=["status"])
+            if txn.transaction_type == TransactionType.OPEN:
+                saving_plan = txn.saving_plan
+                saving_plan.status = SavingPlanStatus.CLOSED
+                saving_plan.save(update_fields=["status"])
+            return txn
+
+        if new_status != TransactionStatus.SUCCESS:
+            raise ValueError("Unsupported transaction status")
+
+        saving_plan = txn.saving_plan
+        saving_plan.refresh_from_db()
+        today = now().date()
+
+        if txn.transaction_type == TransactionType.OPEN:
+            if saving_plan.status != SavingPlanStatus.PENDING:
+                return txn
+
+            saving_plan.status = SavingPlanStatus.ACTIVE
+            saving_plan.start_date = today
+            if saving_plan.saving_type.is_flexible:
+                saving_plan.interest_last_applied_on = today
+            SavingPlan.objects.filter(pk=saving_plan.pk).update(
+                balance=txn.amount,
+                status=SavingPlanStatus.ACTIVE,
+                start_date=today,
+                interest_last_applied_on=today if saving_plan.saving_type.is_flexible else None,
+            )
+            saving_plan.refresh_from_db(fields=["balance", "status", "start_date", "interest_last_applied_on"])
+
+            balance_before = Decimal("0.00")
+            balance_after = txn.amount
+
+        elif txn.transaction_type == TransactionType.DEPOSIT:
+            if not saving_plan.saving_type.is_flexible:
+                raise ValueError("Additional deposits are not allowed for fixed-term saving plans")
+
+            apply_interest(saving_plan)
+            balance_before = saving_plan.balance
+            balance_after = balance_before + txn.amount
+
+            SavingPlan.objects.filter(pk=saving_plan.pk).update(balance=F("balance") + txn.amount)
+            saving_plan.refresh_from_db(fields=["balance"])
+
+        elif txn.transaction_type == TransactionType.WITHDRAW:
+            if saving_plan.saving_type.is_flexible:
+                if saving_plan.start_date is None:
+                    raise ValueError("Saving plan has no start date")
+                min_deposit_days_flexible = int(get_parameter("min_deposit_days_flexible", 15))
+                days_since_start = (today - saving_plan.start_date).days
+                if days_since_start < min_deposit_days_flexible:
+                    raise ValueError(f"Cannot withdraw within {min_deposit_days_flexible} days after deposited")
+
+                apply_interest(saving_plan)
+                balance_before = saving_plan.balance
+
+                if txn.amount > balance_before:
+                    raise ValueError("Insufficient balance")
+
+                balance_after = balance_before - txn.amount
+                SavingPlan.objects.filter(pk=saving_plan.pk).update(balance=F("balance") - txn.amount)
+                saving_plan.refresh_from_db(fields=["balance"])
+
+                if balance_after == 0:
+                    close_saving_plan(saving_plan)
+
+            else:
+                if saving_plan.maturity_date is None:
+                    raise ValueError("Fixed-term saving plan is missing maturity date")
+                if today < saving_plan.maturity_date:
+                    raise ValueError("Cannot withdraw before maturity")
+
+                balance_before = apply_interest(saving_plan)
+                balance_after = Decimal("0.00")
+
+                SavingPlan.objects.filter(pk=saving_plan.pk).update(balance=Decimal("0.00"))
+                saving_plan.refresh_from_db(fields=["balance"])
+                close_saving_plan(saving_plan)
+
+        else:
+            raise ValueError("Unsupported transaction type")
+
+        txn.balance_before = balance_before
+        txn.balance_after = balance_after
+        txn.status = TransactionStatus.SUCCESS
+        txn.save(update_fields=["balance_before", "balance_after", "status"])
+        return txn
+
+
+def approve_transaction(txn: Transaction) -> Transaction:
+    return process_transaction(txn, TransactionStatus.SUCCESS)
+
+
+def cancel_transaction(txn: Transaction) -> Transaction:
+    return process_transaction(txn, TransactionStatus.CANCELED)
