@@ -12,7 +12,7 @@ def get_dashboard_reports():
     month_start = today.replace(day=1)
     month_label = today.strftime("%Y-%m")
 
-    daily_statistics = get_statistics("day", date=today)
+    daily_statistics = get_statistics("day", day=today)
     monthly_statistics = get_statistics("month", month=month_label)
     opened_this_month = SavingPlan.objects.filter(created_at__date__gte=month_start).count()
 
@@ -162,7 +162,7 @@ def build_report_context(report_type, date_value, month_value):
         selected_month_value = today.month
 
     if report_type == "cash":
-        statistics = get_statistics("day", date=selected_date)
+        statistics = get_statistics("day", day=selected_date)
         report = {
             "type": "cash",
             "label": selected_date,

@@ -105,7 +105,7 @@ def generate_statistics(cleaned_data, month=None, year=None):
     return get_statistics(
         period=cleaned_data["period_type"],
         saving_plan=cleaned_data["saving_plan"],
-        date=cleaned_data.get("date"),
+        day=cleaned_data.get("date"),
         month=month,
         year=year,
     )
@@ -303,15 +303,15 @@ def change_saving_type_rate(
 
     return saving_type
 
-def get_statistics(period: str, saving_plan=None, date=None, month=None, year=None):
+def get_statistics(period: str, saving_plan=None, day=None, month=None, year=None):
     transactions = Transaction.objects.filter(status=TransactionStatus.SUCCESS)
 
     if saving_plan is not None:
         transactions = transactions.filter(saving_plan=saving_plan)
     
     if period == "day":
-        if date:
-            transactions = transactions.filter(timestamp__date=date)
+        if day:
+            transactions = transactions.filter(timestamp__date=day)
     elif period == "month":
         if month:
             try:
@@ -331,7 +331,7 @@ def get_statistics(period: str, saving_plan=None, date=None, month=None, year=No
     total_expense = total_withdraw + total_close
 
     if period == "day":
-        label = str(date) if date else "N/A"
+        label = str(day) if day else "N/A"
     elif period == "month":
         label = month if month else "N/A"
     elif period == "year":
@@ -480,11 +480,3 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
         txn.status = TransactionStatus.SUCCESS
         txn.save(update_fields=["balance_before", "balance_after", "status"])
         return txn
-
-
-def approve_transaction(txn: Transaction) -> Transaction:
-    return process_transaction(txn, TransactionStatus.SUCCESS)
-
-
-def cancel_transaction(txn: Transaction) -> Transaction:
-    return process_transaction(txn, TransactionStatus.CANCELED)
