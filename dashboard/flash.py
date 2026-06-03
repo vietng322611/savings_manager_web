@@ -15,6 +15,7 @@ def flash(
         "level": level,
         "text": text,
     })
+    request.session.modified = True
 
 def flash_success(request: HttpRequest, text: str) -> None:
     flash(request, "success", text)

@@ -1,8 +1,9 @@
 from allauth.account.forms import SignupForm
 from django import forms
-from django.db import IntegrityError, transaction
+from django.db import transaction
 
 from .models import Customer, CustomUser
+
 
 class CustomSignupForm(SignupForm):
     full_name = forms.CharField(max_length=50)
@@ -15,12 +16,15 @@ class CustomSignupForm(SignupForm):
             raise forms.ValidationError("This email is already registered.")
         return email
 
+    def clean_citizen_id(self):
+        citizen_id = self.cleaned_data["citizen_id"]
+        if Customer.objects.filter(citizen_id=citizen_id).exists():
+            raise forms.ValidationError("This citizen ID is already registered.")
+        return citizen_id
+
     def save(self, request):
         with transaction.atomic():
-            try:
-                user = super().save(request)
-            except IntegrityError:
-                raise forms.ValidationError({"email": "This email is already registered."})
+            user = super().save(request)
 
             Customer.objects.create(
                 user=user,
@@ -39,6 +43,15 @@ class InformationChangeForm(forms.ModelForm):
             "citizen_id",
             "address",
         ]
+
+    def clean_citizen_id(self):
+        citizen_id = self.cleaned_data["citizen_id"]
+        if Customer.objects.filter(
+            citizen_id=citizen_id
+        ).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("This citizen ID is already registered.")
+
+        return citizen_id
 
 class EmailChangeForm(forms.Form):
     email = forms.EmailField(label="New email")
@@ -62,6 +75,16 @@ class EmailChangeForm(forms.Form):
             self.add_error("confirm_email", "Emails do not match")
 
         return cleaned_data
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+
+        if CustomUser.objects.filter(
+                email__iexact=email
+        ).exclude(pk=self.user.pk).exists():
+            raise forms.ValidationError("This email is already registered.")
+
+        return email
 
     def clean_password(self):
         password = self.cleaned_data.get("password")

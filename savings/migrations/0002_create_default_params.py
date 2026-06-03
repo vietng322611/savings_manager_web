@@ -29,7 +29,7 @@ def create_default_params(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("savings", "0002_initial"),
+        ("savings", "0001_initial"),
     ]
 
     operations = [

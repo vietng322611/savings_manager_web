@@ -7,6 +7,15 @@
 {% endblock %}
 
 {% block content %}
+
+{% for message in flashes %}
+<div class="messages">
+    <div class="message {{ message.level }}">
+        {{ message.text }}
+    </div>
+</div>
+{% endfor %}
+
 <div class="page-header">
     <div>
         <h1>Edit Saving Type</h1>
@@ -83,7 +92,6 @@
             <button
                 type="submit"
                 class="create-button"
-                {% if not request.user.employee.can_edit %}disabled{% endif %}
             >
                 Save Changes
             </button>
@@ -102,6 +110,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const durationInput = document.getElementById("id_duration_months");
 
     function updateDurationState() {
+        if (flexibleCheckbox.checked)
+            durationInput.value = "";
         durationInput.disabled = flexibleCheckbox.checked;
     }
 

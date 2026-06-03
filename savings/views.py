@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 from django.db.models import Q
 
 from dashboard.decorators import customer_required
-from dashboard.flash import flash_success
+from dashboard.flash import flash_success, flash_error
 from dashboard.utils import get_parameter
 from savings.forms import (
     SavingPlanCreateForm,
@@ -45,36 +45,29 @@ def saving_plan_detail(request, plan_id):
     action_form = SavingPlanActionForm(prefix="action")
 
     if request.method == "POST":
-        action_form = SavingPlanActionForm(
-            request.POST,
-            prefix="action"
-        )
-
-        if action_form.is_valid():
-            try:
+        if saving_plan.saving_type.is_flexible:
+            action_form = SavingPlanActionForm(request.POST, prefix="action")
+            if action_form.is_valid():
                 action = action_form.cleaned_data["action"]
                 amount = action_form.cleaned_data["amount"]
+                try:
+                    if action == "deposit":
+                        deposit(saving_plan, amount)
+                        flash_success(request, f"Created request to deposit {amount}")
+                    else:
+                        withdraw(saving_plan, amount)
+                        flash_success(request, f"Created request to withdraw {amount}")
+                except ValueError as exc:
+                    flash_error(request, str(exc))
 
-                if action == "deposit":
-                    deposit(saving_plan, amount)
-                    flash_success(
-                        request,
-                        f"Created request to deposit {amount}"
-                    )
-                else:
-                    withdraw(saving_plan, amount)
-                    flash_success(
-                        request,
-                        f"Created request to withdraw {amount}"
-                    )
-
-                return redirect(
-                    "saving_plan_detail",
-                    plan_id=plan_id
-                )
-
-            except ValueError as e:
-                action_form.add_error(None, str(e))
+                return redirect("saving_plan_detail", plan_id=plan_id)
+        else:
+            try:
+                withdraw(saving_plan, saving_plan.balance)
+                flash_success(request, "Created request to withdraw all balances")
+            except ValueError as exc:
+                flash_error(request, str(exc))
+            return redirect("saving_plan_detail", plan_id=plan_id)
 
     transactions = saving_plan.transactions.order_by("-timestamp")
 

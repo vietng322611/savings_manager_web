@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect
 from django.db import transaction
 
 from dashboard.decorators import employee_required, employee_write_required
-from dashboard.flash import flash_success
+from dashboard.flash import flash_success, flash_error
 from savings.models import TransactionType, TransactionStatus
 from users.forms import InformationChangeForm
 from .forms import EmployeeChangeForm, UserCreateForm, SavingTypeEditForm
@@ -87,12 +87,15 @@ def manage_user_detail(request, user_id):
 def user_create(request):
     form = UserCreateForm()
     if request.method == "POST":
-        form = UserCreateForm(request.POST)
-        if form.is_valid():
-            form.save()
+        try:
+            form = UserCreateForm(request.POST)
+            if form.is_valid():
+                form.save()
 
-            flash_success(request, "Successfully created user.")
-            return redirect("manage_users")
+                flash_success(request, "Successfully created user.")
+                return redirect("manage_users")
+        except Exception:
+            flash_error(request, "An error occurred while creating the user.")
 
     return render(request, "employees/users/user_create.html", { "form": form })
 
@@ -108,8 +111,8 @@ def manage_reports(request):
         )
         return render(request, "employees/savings/reports.html", context)
     except Exception as e:
-        # there aren't any errors on this page that's not a server error
-        # user input barely affects the logic, so we can't return any 4xx code
+        # there aren't any errors on this page that are not a critical server error
+        # returning 5xx instead of showing error is ok here
         return HttpResponseServerError(str(e))
 
 @employee_required
@@ -134,6 +137,7 @@ def manage_saving_plan_detail(request, plan_id):
 
 @employee_required
 def manage_saving_types(request):
+    print(request.session.get("_flash"))
     return render(request, "employees/savings/saving_types.html", {
         "saving_types": get_saving_types(),
     })
@@ -144,26 +148,28 @@ def manage_saving_type_detail(request, saving_type_id):
     form = SavingTypeEditForm(instance=saving_type)
 
     if request.method == "POST":
-        form = SavingTypeEditForm(request.POST, instance=saving_type)
-        if form.is_valid():
-            duration_changed = form.cleaned_data["duration_months"] != saving_type.duration_months
-            if duration_changed:
-                with transaction.atomic():
-                    # Keep old product definition for audit/history.
-                    saving_type.is_active = False
-                    saving_type.save(update_fields=["is_active"])
+        try:
+            form = SavingTypeEditForm(request.POST, instance=saving_type)
+            if form.is_valid():
+                duration_changed = form.cleaned_data["duration_months"] != saving_type.duration_months
+                if duration_changed:
+                    with transaction.atomic():
+                        # Keep old product definition for audit/history.
+                        saving_type.is_active = False
+                        saving_type.save(update_fields=["is_active"])
 
-                    new_saving_type = form.save(commit=False)
-                    new_saving_type.pk = None
-                    new_saving_type.save()
+                        new_saving_type = form.save(commit=False)
+                        new_saving_type.pk = None
+                        new_saving_type.save()
 
+                    flash_success(request, "Saving type updated successfully.")
+                    return redirect("manage_saving_type_detail", saving_type_id=new_saving_type.id)
+
+                form.save()
                 flash_success(request, "Saving type updated successfully.")
-                return redirect("manage_saving_type_detail", saving_type_id=new_saving_type.id)
-
-            form.save()
-
-            flash_success(request, "Saving type updated successfully.")
-            return redirect("manage_saving_type_detail", saving_type_id=saving_type.id)
+                return redirect("manage_saving_type_detail", saving_type_id=saving_type.id)
+        except Exception:
+            flash_error(request, "An error occurred while updating the saving type.")
 
     return render(request,"employees/savings/saving_type_detail.html",{
         "form": form,
@@ -175,11 +181,14 @@ def saving_type_create(request):
     form = SavingTypeEditForm()
 
     if request.method == "POST":
-        form = SavingTypeEditForm(request.POST)
-        if form.is_valid():
-            form.save()
-            flash_success(request, "Saving type created successfully.")
-            return redirect("manage_saving_types")
+        try:
+            form = SavingTypeEditForm(request.POST)
+            if form.is_valid():
+                form.save()
+                flash_success(request, "Saving type created successfully.")
+                return redirect("manage_saving_types")
+        except Exception:
+            flash_error(request, "An error occurred while creating the saving type.")
 
     return render(request, "employees/savings/saving_type_detail.html", {
         "form": form,
@@ -189,14 +198,14 @@ def saving_type_create(request):
 def manage_transactions(request):
     transactions = search_transactions(
         query=request.GET.get("search", ""),
-        transaction_type=request.GET.get("transaction_type", ""),
-        transaction_status=request.GET.get("status", ""),
+        transaction_type=request.GET.get("type", ""),
+        status=request.GET.get("status", ""),
     )
 
     return render(request, "employees/savings/transactions.html", {
         "transactions": transactions,
-        "transaction_types": transactions.model.transaction_type,
-        "transaction_status": transactions.model.status,
+        "transaction_types": TransactionType.choices,
+        "status": TransactionStatus.choices,
     })
 
 # TODO: Handle success/error message
@@ -206,38 +215,20 @@ def manage_transaction_detail(request, transaction_id):
 
     if request.method == "POST":
         action = request.POST.get("action")
-
         try:
             match action:
                 case "approve":
-                    process_transaction(
-                        selected_transaction,
-                        TransactionStatus.SUCCESS
-                    )
-
-                    flash_success(
-                        request,
-                        "Transaction approved successfully."
-                    )
+                    process_transaction(selected_transaction, TransactionStatus.SUCCESS)
+                    flash_success(request, "Transaction approved successfully.")
 
                 case "cancel":
-                    process_transaction(
-                        selected_transaction,
-                        TransactionStatus.CANCELED
-                    )
+                    process_transaction(selected_transaction, TransactionStatus.CANCELED)
+                    flash_success(request, "Transaction cancelled successfully.")
+        except Exception as e:
+            print(str(e))
+            flash_error(request, "An error occurred while processing the transaction.")
 
-                    flash_success(
-                        request,
-                        "Transaction cancelled successfully."
-                    )
-
-        except ValueError as e:
-            messages.error(request, str(e))
-
-        return redirect(
-            "manage_transaction_detail",
-            transaction_id=selected_transaction.id
-        )
+        return redirect(request.path, transaction_id=selected_transaction.id)
 
     return render(
         request,

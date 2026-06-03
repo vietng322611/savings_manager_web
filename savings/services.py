@@ -1,5 +1,5 @@
 from django.db import transaction
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import date
 from django.db.models import F, Sum
 
@@ -47,7 +47,7 @@ def create_saving_plan(
 
     with transaction.atomic():
         saving_plan = SavingPlan.objects.create(
-            balance=Decimal("0.00"),
+            balance=initial_balance,
             interest_rate=saving_type.interest_rate,
             status=SavingPlanStatus.PENDING,
             # Start accrual tracking only when the plan is approved.
@@ -140,6 +140,9 @@ def deposit(saving_plan: SavingPlan, amount: Decimal):
         if saving_plan.status != SavingPlanStatus.ACTIVE:
             raise ValueError("Saving plan is not active yet")
 
+        if has_pending_transactions(saving_plan):
+            raise ValueError("Cannot deposit while there are pending transactions")
+
         if not saving_plan.saving_type.is_flexible:
             raise ValueError("Additional deposits are not allowed for fixed-term saving plans")
 
@@ -174,6 +177,9 @@ def withdraw(saving_plan: SavingPlan, amount: Decimal) -> Decimal:
 
         if saving_plan.status != SavingPlanStatus.ACTIVE:
             raise ValueError("Saving plan is not active yet")
+
+        if has_pending_transactions(saving_plan):
+            raise ValueError("Cannot withdraw while there are pending transactions")
 
         if not saving_plan.saving_type.is_flexible: # fixed-term
             if saving_plan.maturity_date is None:
@@ -255,7 +261,12 @@ def apply_interest(saving_plan: SavingPlan):
         days = (today - from_date).days
         interest += saving_plan.balance * (saving_plan.interest_rate / Decimal("100")) * (Decimal(days) / Decimal("365"))
 
-    saving_plan.balance += interest
+    saving_plan.balance = (
+            saving_plan.balance + interest
+    ).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
     saving_plan.interest_last_applied_on = today
     # Keep the saving plan snapshot in sync with current saving type display rate.
     saving_plan.interest_rate = saving_plan.saving_type.interest_rate
@@ -375,6 +386,8 @@ def save_transaction(
         balance_after=balance_after
     )
 
+def has_pending_transactions(saving_plan: SavingPlan) -> bool:
+    return Transaction.objects.filter(saving_plan=saving_plan, status=TransactionStatus.PENDING).exists()
 
 def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Transaction:
     """
@@ -415,6 +428,7 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
             saving_plan.start_date = today
             if saving_plan.saving_type.is_flexible:
                 saving_plan.interest_last_applied_on = today
+
             SavingPlan.objects.filter(pk=saving_plan.pk).update(
                 balance=txn.amount,
                 status=SavingPlanStatus.ACTIVE,

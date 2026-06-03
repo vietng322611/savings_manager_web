@@ -7,6 +7,15 @@
 {% endblock %}
 
 {% block content %}
+
+{% for message in flashes %}
+<div class="messages">
+    <div class="message {{ message.level }}">
+        {{ message.text }}
+    </div>
+</div>
+{% endfor %}
+
 <div class="container">
     <aside class="sidebar card">
         <h2>#{{ saving_plan.plan_id }}</h2>
@@ -31,18 +40,8 @@
     <div class="content">
         {% if saving_plan.status != "PENDING" %}
         <section class="card">
-            <div class="section-header">
-                <h3>Deposit / Withdraw</h3>
-            </div>
-
-            {% if action_form.non_field_errors %}
-            <div class="alert alert-danger">
-                {% for error in action_form.non_field_errors %}
-                    <p>{{ error }}</p>
-                {% endfor %}
-            </div>
-            {% endif %}
-
+            {% if saving_plan.saving_type.is_flexible %}
+            <div class="section-header"><h3>Deposit / Withdraw</h3></div>
             <form method="post" class="search-form">
                 {% csrf_token %}
                 <div class="field-inline amount-field">
@@ -63,6 +62,14 @@
                     Submit
                 </button>
             </form>
+            {% else %}
+            <div class="section-header"><h3>Withdraw</h3></div>
+            <form method="post" class="search-form" style="align-items: center;">
+                {% csrf_token %}
+                <div>Withdraw all?</div>
+                <button type="submit" class="action-button compact-button">Submit</button>
+            </form>
+            {% endif %}
         </section>
         {% endif %}
         <section class="card">
