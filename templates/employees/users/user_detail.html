@@ -7,13 +7,13 @@
 
 {% block content %}
 
-{% if flash %}
+{% for message in flashes %}
 <div class="messages">
-    <div class="message {{ flash.level }}">
-        {{ flash.text }}
+    <div class="message {{ message.level }}">
+        {{ message.text }}
     </div>
 </div>
-{% endif %}
+{% endfor %}
 
 <div class="user-layout">
     <aside class="user-sidebar card">

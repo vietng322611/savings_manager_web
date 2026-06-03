@@ -9,13 +9,13 @@
 
 {% block content %}
 
-{% if flash %}
+{% for message in flashes %}
 <div class="messages">
-    <div class="message {{ flash.level }}">
-        {{ flash.text }}
+    <div class="message {{ message.level }}">
+        {{ message.text }}
     </div>
 </div>
-{% endif %}
+{% endfor %}
 
 <div class="container">
     <aside class="sidebar card">
@@ -43,7 +43,7 @@
         </div>
 
         <div class="sidebar-actions">
-            {% if transaction.status == "PENDING" %}
+            {% if user.employee.can_edit and transaction.status == "PENDING" %}
             <form method="post">
                 {% csrf_token %}
                 <button

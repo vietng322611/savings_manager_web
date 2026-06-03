@@ -135,6 +135,7 @@ def manage_saving_plan_detail(request, plan_id):
 
 @employee_required
 def manage_saving_types(request):
+    print(request.session.get("_flash"))
     return render(request, "employees/savings/saving_types.html", {
         "saving_types": get_saving_types(),
     })
