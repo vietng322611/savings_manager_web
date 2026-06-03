@@ -1,5 +1,5 @@
 from django.db import transaction
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import date
 from django.db.models import F, Sum
 
@@ -261,7 +261,12 @@ def apply_interest(saving_plan: SavingPlan):
         days = (today - from_date).days
         interest += saving_plan.balance * (saving_plan.interest_rate / Decimal("100")) * (Decimal(days) / Decimal("365"))
 
-    saving_plan.balance += interest
+    saving_plan.balance = (
+            saving_plan.balance + interest
+    ).quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
     saving_plan.interest_last_applied_on = today
     # Keep the saving plan snapshot in sync with current saving type display rate.
     saving_plan.interest_rate = saving_plan.saving_type.interest_rate

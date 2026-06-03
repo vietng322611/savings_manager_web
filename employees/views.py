@@ -222,7 +222,8 @@ def manage_transaction_detail(request, transaction_id):
                 case "cancel":
                     process_transaction(selected_transaction, TransactionStatus.CANCELED)
                     flash_success(request, "Transaction cancelled successfully.")
-        except Exception:
+        except Exception as e:
+            print(str(e))
             flash_error(request, "An error occurred while processing the transaction.")
 
         return redirect(request.path, transaction_id=selected_transaction.id)
