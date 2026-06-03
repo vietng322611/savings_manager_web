@@ -1,3 +1,4 @@
+requests
 Django>=5.0
 python-dotenv
 django-environ
