@@ -37,7 +37,7 @@
             <option value="">All status</option>
             {% for key, label in status %}
             <option value="{{ key }}"
-                {% if request.GET.type == key %}
+                {% if request.GET.status == key %}
                     selected
                 {% endif %}
             >

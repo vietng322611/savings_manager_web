@@ -197,13 +197,13 @@ def manage_transactions(request):
     transactions = search_transactions(
         query=request.GET.get("search", ""),
         transaction_type=request.GET.get("type", ""),
-        transaction_status=request.GET.get("status", ""),
+        status=request.GET.get("status", ""),
     )
 
     return render(request, "employees/savings/transactions.html", {
         "transactions": transactions,
         "transaction_types": TransactionType.choices,
-        "transaction_status": TransactionStatus.choices,
+        "status": TransactionStatus.choices,
     })
 
 # TODO: Handle success/error message
@@ -225,7 +225,7 @@ def manage_transaction_detail(request, transaction_id):
         except Exception:
             flash_error(request, "An error occurred while processing the transaction.")
 
-        return redirect("transaction_detail", transaction_id=selected_transaction.id)
+        return redirect(request.path, transaction_id=selected_transaction.id)
 
     return render(request,"employees/savings/transaction_detail.html",{
         "transaction": selected_transaction,

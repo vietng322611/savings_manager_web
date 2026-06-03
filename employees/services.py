@@ -112,7 +112,7 @@ def get_transaction_detail(transaction_id):
         pk=transaction_id
     )
 
-def search_transactions(query="", transaction_type="", transaction_status=""):
+def search_transactions(query="", transaction_type="", status=""):
     transactions = Transaction.objects.select_related("saving_plan", "saving_plan__saving_type").order_by("-timestamp")
     query = query.strip()
 
@@ -124,8 +124,8 @@ def search_transactions(query="", transaction_type="", transaction_status=""):
 
     if transaction_type:
         transactions = transactions.filter(transaction_type=transaction_type)
-    if transaction_status:
-        transactions = transactions.filter(transaction_status=transaction_status)
+    if status:
+        transactions = transactions.filter(status=status)
 
     return transactions
 
