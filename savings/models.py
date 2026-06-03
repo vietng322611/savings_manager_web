@@ -32,6 +32,9 @@ class SavingType(models.Model):
 
     is_active = models.BooleanField(default=True)
 
+    def __str__(self):
+        return f"{self.name} ({self.interest_rate:.2f}%)"
+
     def clean(self):
         super().clean()
         if not self.is_flexible and self.duration_months is None:
