@@ -79,7 +79,7 @@ class SavingType(models.Model):
         constraints = [
             models.CheckConstraint(
                 name="savingtype_duration_matches_flexibility",
-                check=(
+                condition=(
                     (Q(is_flexible=True) & Q(duration_months__isnull=True))
                     | (Q(is_flexible=False) & Q(duration_months__isnull=False))
                 ),
