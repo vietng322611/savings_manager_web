@@ -140,6 +140,9 @@ def deposit(saving_plan: SavingPlan, amount: Decimal):
         if saving_plan.status != SavingPlanStatus.ACTIVE:
             raise ValueError("Saving plan is not active yet")
 
+        if has_pending_transactions(saving_plan):
+            raise ValueError("Cannot deposit while there are pending transactions")
+
         if not saving_plan.saving_type.is_flexible:
             raise ValueError("Additional deposits are not allowed for fixed-term saving plans")
 
@@ -174,6 +177,9 @@ def withdraw(saving_plan: SavingPlan, amount: Decimal) -> Decimal:
 
         if saving_plan.status != SavingPlanStatus.ACTIVE:
             raise ValueError("Saving plan is not active yet")
+
+        if has_pending_transactions(saving_plan):
+            raise ValueError("Cannot withdraw while there are pending transactions")
 
         if not saving_plan.saving_type.is_flexible: # fixed-term
             if saving_plan.maturity_date is None:
@@ -375,6 +381,8 @@ def save_transaction(
         balance_after=balance_after
     )
 
+def has_pending_transactions(saving_plan: SavingPlan) -> bool:
+    return Transaction.objects.filter(saving_plan=saving_plan, status=TransactionStatus.PENDING).exists()
 
 def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Transaction:
     """
