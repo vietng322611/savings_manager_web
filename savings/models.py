@@ -1,15 +1,16 @@
-from django.db import models
-from django.db import IntegrityError
-from django.utils import timezone
-from django.utils.timezone import now
 import secrets
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxLengthValidator, MinValueValidator
+from django.core.validators import MinValueValidator
+from django.db import IntegrityError
+from django.db import models
 from django.db.models import Q
+from django.utils import timezone
+from django.utils.timezone import now
 
 from users.models import Customer
+
 
 def generate_plan_id():
     """Generates a random 10-digit saving plan ID."""
@@ -119,7 +120,7 @@ class SavingPlan(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
-    status = models.CharField(max_length=10, choices=SavingPlanStatus.choices, default=SavingPlanStatus.PENDING)
+    status = models.CharField(max_length=10, choices=SavingPlanStatus, default=SavingPlanStatus.PENDING)
     deactivated_at = models.DateTimeField(null=True, blank=True)
 
     interest_rate = models.DecimalField(
@@ -196,8 +197,8 @@ class TransactionStatus(models.TextChoices):
     CANCELED = "CANCELED", "Canceled"
 
 class Transaction(models.Model):
-    transaction_type = models.CharField(max_length=10, choices=TransactionType.choices)
-    status = models.CharField(max_length=10, choices=TransactionStatus.choices, default=TransactionStatus.PENDING,)
+    transaction_type = models.CharField(max_length=10, choices=TransactionType)
+    status = models.CharField(max_length=10, choices=TransactionStatus, default=TransactionStatus.PENDING,)
     balance_before = models.DecimalField(
         max_digits=12,
         decimal_places=2,
