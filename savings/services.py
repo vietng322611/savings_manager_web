@@ -47,7 +47,7 @@ def create_saving_plan(
 
     with transaction.atomic():
         saving_plan = SavingPlan.objects.create(
-            balance=Decimal("0.00"),
+            balance=initial_balance,
             interest_rate=saving_type.interest_rate,
             status=SavingPlanStatus.PENDING,
             # Start accrual tracking only when the plan is approved.
@@ -415,6 +415,7 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
             saving_plan.start_date = today
             if saving_plan.saving_type.is_flexible:
                 saving_plan.interest_last_applied_on = today
+
             SavingPlan.objects.filter(pk=saving_plan.pk).update(
                 balance=txn.amount,
                 status=SavingPlanStatus.ACTIVE,
