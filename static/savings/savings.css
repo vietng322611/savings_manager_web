@@ -103,10 +103,14 @@
 
 .badge.active,
 .badge.success,
-.badge.open,
-.badge.deposit {
+.badge.open {
     background: #dcfce7;
     color: #166534;
+}
+
+.badge.deposit {
+    background: #dbeafe;
+    color: #1d4ed8;
 }
 
 .badge.closed,
