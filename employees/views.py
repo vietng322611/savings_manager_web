@@ -152,6 +152,7 @@ def manage_saving_type_detail(request, saving_type_id):
             if form.is_valid():
                 new_duration = form.cleaned_data["duration_months"]
                 duration_changed = new_duration != saving_type.duration_months
+                flexible_changed = form.cleaned_data["is_flexible"] != saving_type.is_flexible
                 rate_changed = form.cleaned_data["interest_rate"] != saving_type.interest_rate
 
                 if duration_changed and new_duration is not None:
@@ -175,6 +176,18 @@ def manage_saving_type_detail(request, saving_type_id):
 
                         flash_success(request, "Saving type updated successfully.")
                         return redirect("manage_saving_type_detail", saving_type_id=new_saving_type.id)
+                elif flexible_changed:
+                    with transaction.atomic():
+                        # Version the saving type instead of mutating the semantics in place.
+                        saving_type.is_active = False
+                        saving_type.save(update_fields=["is_active"])
+
+                        new_saving_type = form.save(commit=False)
+                        new_saving_type.pk = None
+                        new_saving_type.save()
+
+                    flash_success(request, "Saving type updated successfully.")
+                    return redirect("manage_saving_type_detail", saving_type_id=new_saving_type.id)
                 else:
                     with transaction.atomic():
                         if rate_changed:

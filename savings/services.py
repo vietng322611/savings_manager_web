@@ -42,8 +42,6 @@ def create_saving_plan(
         raise ValueError(f"Minimum balance is {min_initial_deposit:,.0f}")
 
     maturity_date = None
-    if not saving_type.is_flexible and saving_type.duration_months:
-        maturity_date = _add_months(now().date(), saving_type.duration_months)
 
     with transaction.atomic():
         saving_plan = SavingPlan.objects.create(
@@ -424,8 +422,16 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
             if saving_plan.status != SavingPlanStatus.PENDING:
                 return txn
 
+            if not saving_plan.saving_type.is_flexible and saving_plan.saving_type.duration_months is None:
+                raise ValueError("Fixed-term saving plan is missing duration")
+
+            maturity_date = None
+            if not saving_plan.saving_type.is_flexible:
+                maturity_date = _add_months(txn.timestamp.date(), saving_plan.saving_type.duration_months)
+
             saving_plan.status = SavingPlanStatus.ACTIVE
             saving_plan.start_date = today
+            saving_plan.maturity_date = maturity_date
             if saving_plan.saving_type.is_flexible:
                 saving_plan.interest_last_applied_on = today
 
@@ -433,9 +439,10 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
                 balance=txn.amount,
                 status=SavingPlanStatus.ACTIVE,
                 start_date=today,
+                maturity_date=maturity_date,
                 interest_last_applied_on=today if saving_plan.saving_type.is_flexible else None,
             )
-            saving_plan.refresh_from_db(fields=["balance", "status", "start_date", "interest_last_applied_on"])
+            saving_plan.refresh_from_db(fields=["balance", "status", "start_date", "maturity_date", "interest_last_applied_on"])
 
             balance_before = Decimal("0.00")
             balance_after = txn.amount
