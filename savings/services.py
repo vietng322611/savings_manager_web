@@ -47,7 +47,7 @@ def create_saving_plan(
 
     with transaction.atomic():
         saving_plan = SavingPlan.objects.create(
-            balance=initial_balance,
+            balance=Decimal("0.00"),
             interest_rate=saving_type.interest_rate,
             status=SavingPlanStatus.PENDING,
             # Start accrual tracking only when the plan is approved.
@@ -187,11 +187,11 @@ def withdraw(saving_plan: SavingPlan, amount: Decimal) -> Decimal:
             if today < saving_plan.maturity_date:
                 raise ValueError("Cannot withdraw before maturity")
 
-            balance = saving_plan.balance
+            balance = apply_interest(saving_plan)
             save_transaction(
                 saving_plan,
                 TransactionType.WITHDRAW,
-                balance,
+                saving_plan.balance,
                 balance,
                 Decimal("0.00"),
                 status=TransactionStatus.PENDING,
@@ -309,8 +309,8 @@ def change_saving_type_rate(
             effective_to=None
         )
 
+        SavingType.objects.filter(pk=saving_type.pk).update(interest_rate=new_rate)
         saving_type.interest_rate = new_rate
-        saving_type.save(update_fields=["interest_rate"])
 
     return saving_type
 
@@ -479,7 +479,8 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
                 if today < saving_plan.maturity_date:
                     raise ValueError("Cannot withdraw before maturity")
 
-                balance_before = apply_interest(saving_plan)
+                balance_before = saving_plan.balance
+                txn.amount = apply_interest(saving_plan)
                 balance_after = Decimal("0.00")
 
                 SavingPlan.objects.filter(pk=saving_plan.pk).update(balance=Decimal("0.00"))
@@ -492,5 +493,5 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
         txn.balance_before = balance_before
         txn.balance_after = balance_after
         txn.status = TransactionStatus.SUCCESS
-        txn.save(update_fields=["balance_before", "balance_after", "status"])
+        txn.save(update_fields=["balance_before", "balance_after", "amount", "status"])
         return txn

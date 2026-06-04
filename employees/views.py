@@ -4,7 +4,7 @@ from django.db import transaction
 
 from dashboard.decorators import employee_required, employee_write_required
 from dashboard.flash import flash_success, flash_error
-from savings.models import TransactionType, TransactionStatus
+from savings.models import SavingType, TransactionType, TransactionStatus
 from users.forms import InformationChangeForm
 from .forms import EmployeeChangeForm, UserCreateForm, SavingTypeEditForm
 from .services import (
@@ -19,6 +19,7 @@ from .services import (
     search_transactions,
     search_users, get_saving_types, get_transaction_detail, process_transaction,
 )
+from savings.services import change_saving_type_rate
 
 @employee_required
 def employee_dashboard(request):
@@ -149,23 +150,45 @@ def manage_saving_type_detail(request, saving_type_id):
         try:
             form = SavingTypeEditForm(request.POST, instance=saving_type)
             if form.is_valid():
-                duration_changed = form.cleaned_data["duration_months"] != saving_type.duration_months
-                if duration_changed:
-                    with transaction.atomic():
-                        # Keep old product definition for audit/history.
-                        saving_type.is_active = False
-                        saving_type.save(update_fields=["is_active"])
+                new_duration = form.cleaned_data["duration_months"]
+                duration_changed = new_duration != saving_type.duration_months
+                rate_changed = form.cleaned_data["interest_rate"] != saving_type.interest_rate
 
-                        new_saving_type = form.save(commit=False)
-                        new_saving_type.pk = None
-                        new_saving_type.save()
+                if duration_changed and new_duration is not None:
+                    if SavingType.objects.filter(
+                        duration_months=new_duration,
+                        is_active=True,
+                    ).exclude(pk=saving_type.pk).exists():
+                        form.add_error(
+                            "duration_months",
+                            "Another active saving type already uses this duration.",
+                        )
+                    else:
+                        with transaction.atomic():
+                            # Keep old product definition for audit/history.
+                            saving_type.is_active = False
+                            saving_type.save(update_fields=["is_active"])
+
+                            new_saving_type = form.save(commit=False)
+                            new_saving_type.pk = None
+                            new_saving_type.save()
+
+                        flash_success(request, "Saving type updated successfully.")
+                        return redirect("manage_saving_type_detail", saving_type_id=new_saving_type.id)
+                else:
+                    with transaction.atomic():
+                        if rate_changed:
+                            change_saving_type_rate(saving_type, form.cleaned_data["interest_rate"])
+
+                        SavingType.objects.filter(pk=saving_type.pk).update(
+                            name=form.cleaned_data["name"],
+                            duration_months=new_duration,
+                            is_flexible=form.cleaned_data["is_flexible"],
+                            is_active=form.cleaned_data["is_active"],
+                        )
 
                     flash_success(request, "Saving type updated successfully.")
-                    return redirect("manage_saving_type_detail", saving_type_id=new_saving_type.id)
-
-                form.save()
-                flash_success(request, "Saving type updated successfully.")
-                return redirect("manage_saving_type_detail", saving_type_id=saving_type.id)
+                    return redirect("manage_saving_type_detail", saving_type_id=saving_type.id)
         except Exception:
             flash_error(request, "An error occurred while updating the saving type.")
 
