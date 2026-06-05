@@ -42,12 +42,10 @@ def create_saving_plan(
         raise ValueError(f"Minimum balance is {min_initial_deposit:,.0f}")
 
     maturity_date = None
-    if not saving_type.is_flexible and saving_type.duration_months:
-        maturity_date = _add_months(now().date(), saving_type.duration_months)
 
     with transaction.atomic():
         saving_plan = SavingPlan.objects.create(
-            balance=initial_balance,
+            balance=Decimal("0.00"),
             interest_rate=saving_type.interest_rate,
             status=SavingPlanStatus.PENDING,
             # Start accrual tracking only when the plan is approved.
@@ -187,11 +185,11 @@ def withdraw(saving_plan: SavingPlan, amount: Decimal) -> Decimal:
             if today < saving_plan.maturity_date:
                 raise ValueError("Cannot withdraw before maturity")
 
-            balance = saving_plan.balance
+            balance = apply_interest(saving_plan)
             save_transaction(
                 saving_plan,
                 TransactionType.WITHDRAW,
-                balance,
+                saving_plan.balance,
                 balance,
                 Decimal("0.00"),
                 status=TransactionStatus.PENDING,
@@ -309,8 +307,8 @@ def change_saving_type_rate(
             effective_to=None
         )
 
+        SavingType.objects.filter(pk=saving_type.pk).update(interest_rate=new_rate)
         saving_type.interest_rate = new_rate
-        saving_type.save(update_fields=["interest_rate"])
 
     return saving_type
 
@@ -424,8 +422,16 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
             if saving_plan.status != SavingPlanStatus.PENDING:
                 return txn
 
+            if not saving_plan.saving_type.is_flexible and saving_plan.saving_type.duration_months is None:
+                raise ValueError("Fixed-term saving plan is missing duration")
+
+            maturity_date = None
+            if not saving_plan.saving_type.is_flexible:
+                maturity_date = _add_months(txn.timestamp.date(), saving_plan.saving_type.duration_months)
+
             saving_plan.status = SavingPlanStatus.ACTIVE
             saving_plan.start_date = today
+            saving_plan.maturity_date = maturity_date
             if saving_plan.saving_type.is_flexible:
                 saving_plan.interest_last_applied_on = today
 
@@ -433,9 +439,10 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
                 balance=txn.amount,
                 status=SavingPlanStatus.ACTIVE,
                 start_date=today,
+                maturity_date=maturity_date,
                 interest_last_applied_on=today if saving_plan.saving_type.is_flexible else None,
             )
-            saving_plan.refresh_from_db(fields=["balance", "status", "start_date", "interest_last_applied_on"])
+            saving_plan.refresh_from_db(fields=["balance", "status", "start_date", "maturity_date", "interest_last_applied_on"])
 
             balance_before = Decimal("0.00")
             balance_after = txn.amount
@@ -479,7 +486,8 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
                 if today < saving_plan.maturity_date:
                     raise ValueError("Cannot withdraw before maturity")
 
-                balance_before = apply_interest(saving_plan)
+                balance_before = saving_plan.balance
+                txn.amount = apply_interest(saving_plan)
                 balance_after = Decimal("0.00")
 
                 SavingPlan.objects.filter(pk=saving_plan.pk).update(balance=Decimal("0.00"))
@@ -492,5 +500,5 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
         txn.balance_before = balance_before
         txn.balance_after = balance_after
         txn.status = TransactionStatus.SUCCESS
-        txn.save(update_fields=["balance_before", "balance_after", "status"])
+        txn.save(update_fields=["balance_before", "balance_after", "amount", "status"])
         return txn
