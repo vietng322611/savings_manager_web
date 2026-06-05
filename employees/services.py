@@ -94,7 +94,7 @@ def get_saving_plan_transactions(saving_plan):
         .order_by("-timestamp")
     )
 
-def search_saving_types(query="", is_active=True):
+def search_saving_types(query="", is_active=None):
     saving_types = SavingType.objects.order_by("name")
     query = query.strip()
 
@@ -102,7 +102,8 @@ def search_saving_types(query="", is_active=True):
         saving_types = saving_types.filter(
             Q(name__icontains=query)
         )
-    saving_types = saving_types.filter(is_active=is_active)
+    if is_active is not None:
+        saving_types = saving_types.filter(is_active=is_active)
 
     return saving_types
 

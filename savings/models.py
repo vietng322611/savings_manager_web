@@ -23,6 +23,7 @@ class SavingType(models.Model):
         null=True,
         blank=True,
         validators=[MinValueValidator(1)],
+        unique=True,
     )  # 3, 6, 12
     interest_rate = models.DecimalField(
         max_digits=5,
