@@ -138,8 +138,8 @@ def manage_saving_plan_detail(request, plan_id):
 def manage_saving_types(request):
     saving_types = search_saving_types(
         query=request.GET.get("search", ""),
-        is_flexible=request.GET.get("type", "false"),
-        is_active=request.GET.get("status", "true"),
+        is_flexible=request.GET.get("type", "False"),
+        is_active=request.GET.get("status", "True"),
     )
 
     return render(request, "employees/savings/saving_types.html", {
