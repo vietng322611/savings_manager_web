@@ -163,7 +163,6 @@ def manage_saving_type_detail(request, saving_type_id):
                 if duration_changed and new_duration is not None:
                     if SavingType.objects.filter(
                         duration_months=new_duration,
-                        is_active=True,
                     ).exclude(pk=saving_type.pk).exists():
                         form.add_error(
                             "duration_months",

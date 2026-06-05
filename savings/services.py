@@ -45,7 +45,7 @@ def create_saving_plan(
 
     with transaction.atomic():
         saving_plan = SavingPlan.objects.create(
-            balance=Decimal("0.00"),
+            balance=initial_balance,
             interest_rate=saving_type.interest_rate,
             status=SavingPlanStatus.PENDING,
             # Start accrual tracking only when the plan is approved.
