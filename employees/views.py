@@ -1,9 +1,11 @@
+from django.contrib.admin.utils import get_last_value_from_parameters
 from django.http import HttpResponseBadRequest, HttpResponseServerError
 from django.shortcuts import render, redirect
 from django.db import transaction
 
 from dashboard.decorators import employee_required, employee_write_required
 from dashboard.flash import flash_success, flash_error
+from dashboard.utils import get_parameter_rows, update_parameters
 from savings.models import SavingType, TransactionType, TransactionStatus
 from users.forms import InformationChangeForm
 from .forms import EmployeeChangeForm, UserCreateForm, SavingTypeEditForm
@@ -268,4 +270,22 @@ def manage_transaction_detail(request, transaction_id):
 
     return render(request,"employees/savings/transaction_detail.html",{
         "transaction": selected_transaction,
+    })
+
+@employee_required
+def manage_parameters(request):
+    errors = {}
+    values = None
+
+    if request.method == "POST":
+        errors = update_parameters(request.POST)
+        if errors:
+            values = request.POST
+            flash_error(request, "Please fix the highlighted parameter values.")
+        else:
+            flash_success(request, "Parameters updated successfully.")
+            return redirect("manage_parameters")
+
+    return render(request, "employees/savings/parameters.html", {
+        "parameters": get_parameter_rows(values=values, errors=errors),
     })

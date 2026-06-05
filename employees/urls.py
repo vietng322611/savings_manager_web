@@ -11,6 +11,7 @@ urlpatterns = [
     path("saving-types/", views.manage_saving_types, name="manage_saving_types"),
     path("saving-types/create/", views.saving_type_create, name="saving_type_create"),
     path("saving-types/<int:saving_type_id>/", views.manage_saving_type_detail, name="manage_saving_type_detail"),
+    path("parameters/", views.manage_parameters, name="manage_parameters"),
     path("transactions/", views.manage_transactions, name="manage_transactions"),
     path("transactions/<int:transaction_id>/", views.manage_transaction_detail, name="manage_transaction_detail"),
     path("reports/", views.manage_reports, name="manage_reports"),

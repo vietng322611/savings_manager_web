@@ -1,0 +1,82 @@
+{% extends "employees/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'savings/savings.css' %}">
+<link rel="stylesheet" href="{% static 'employees/parameters.css' %}">
+{% endblock %}
+
+{% block content %}
+
+{% for message in flashes %}
+<div class="messages">
+    <div class="message {{ message.level }}">
+        {{ message.text }}
+    </div>
+</div>
+{% endfor %}
+
+<div class="page-header">
+    <div>
+        <h1>Parameters</h1>
+        <p>Manage savings rules used for deposits, withdrawals, and plan creation.</p>
+    </div>
+</div>
+
+<section class="card">
+    <div class="section-header">
+        <h3>Savings Rules</h3>
+    </div>
+
+    <form method="post" class="parameters-form">
+        {% csrf_token %}
+
+        <div class="parameters-grid">
+            {% for parameter in parameters %}
+            <div class="parameter-item">
+                <div class="parameter-copy">
+                    <label for="id_{{ parameter.key }}" class="detail-label">
+                        {{ parameter.label }}
+                    </label>
+                    <p>{{ parameter.description }}</p>
+                    <span class="parameter-key">{{ parameter.key }}</span>
+                </div>
+
+                <div class="parameter-control">
+                    <input
+                        id="id_{{ parameter.key }}"
+                        type="{{ parameter.input_type }}"
+                        name="{{ parameter.key }}"
+                        value="{{ parameter.value }}"
+                        step="{{ parameter.step }}"
+                        min="{{ parameter.min }}"
+                        {% if not user.employee.can_edit %}disabled{% endif %}
+                    >
+                    {% if parameter.error %}
+                    <div class="error-message">
+                        {{ parameter.error }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="button-group">
+            {% if user.employee.can_edit %}
+            <button type="submit" class="create-button">
+                Save Changes
+            </button>
+            {% else %}
+            <button type="button" class="create-button" disabled>
+                Read Only
+            </button>
+            {% endif %}
+            <a href="{% url 'employee_dashboard' %}" class="cancel-btn">
+                Cancel
+            </a>
+        </div>
+    </form>
+</section>
+
+{% endblock %}
