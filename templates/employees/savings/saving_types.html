@@ -101,6 +101,7 @@
                         <span class="badge closed">Inactive</span>
                     {% endif %}
                 </td>
+                {% if user.employee.can_edit %}
                 <td class="actions">
                     <a
                         href="{% url 'manage_saving_type_detail' saving_type.id %}"
@@ -109,6 +110,7 @@
                         View
                     </a>
                 </td>
+                {% endif %}
             </tr>
             {% empty %}
             <tr>
