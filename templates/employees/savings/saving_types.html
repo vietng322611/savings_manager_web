@@ -37,23 +37,6 @@
             value="{{ request.GET.search }}"
         >
 
-        <select name="type">
-            <option value="">All Types</option>
-            <option value="flexible"
-                {% if request.GET.type == "flexible" %}
-                    selected
-                {% endif %}
-            >
-                Flexible
-            </option>
-            <option value="fixed"
-                {% if request.GET.type == "fixed" %}
-                    selected
-                {% endif %}
-            >
-                Fixed-Term
-            </option>
-        </select>
         <select name="status">
             <option value="">All Status</option>
             <option value="active"
