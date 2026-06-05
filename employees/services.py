@@ -94,8 +94,18 @@ def get_saving_plan_transactions(saving_plan):
         .order_by("-timestamp")
     )
 
-def get_saving_types():
-    return SavingType.objects.order_by("name")
+def search_saving_types(query="", is_flexible=False, is_active=True):
+    saving_types = SavingType.objects.order_by("name")
+    query = query.strip()
+
+    if query:
+        saving_types = saving_types.filter(
+            Q(name__icontains=query)
+        )
+    saving_types = saving_types.filter(is_flexible=is_flexible)
+    saving_types = saving_types.filter(is_active=is_active)
+
+    return saving_types
 
 def get_saving_type_detail(saving_type_id):
     return get_object_or_404(SavingType, pk=saving_type_id)
@@ -121,7 +131,6 @@ def search_transactions(query="", transaction_type="", status=""):
             Q(saving_plan__plan_id__icontains=query)
             | Q(saving_plan__saving_type__name__icontains=query)
         )
-
     if transaction_type:
         transactions = transactions.filter(transaction_type=transaction_type)
     if status:

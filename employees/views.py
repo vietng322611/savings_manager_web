@@ -17,7 +17,7 @@ from .services import (
     remove_employee_access,
     search_saving_plans,
     search_transactions,
-    search_users, get_saving_types, get_transaction_detail, process_transaction,
+    search_users, search_saving_types, get_transaction_detail, process_transaction,
 )
 
 @employee_required
@@ -135,9 +135,14 @@ def manage_saving_plan_detail(request, plan_id):
 
 @employee_required
 def manage_saving_types(request):
-    print(request.session.get("_flash"))
+    saving_types = search_saving_types(
+        query=request.GET.get("search", ""),
+        is_flexible=request.GET.get("type", "false"),
+        is_active=request.GET.get("status", "true"),
+    )
+
     return render(request, "employees/savings/saving_types.html", {
-        "saving_types": get_saving_types(),
+        "saving_types": saving_types,
     })
 
 @employee_write_required
@@ -206,7 +211,6 @@ def manage_transactions(request):
         "status": TransactionStatus.choices,
     })
 
-# TODO: Handle success/error message
 @employee_write_required
 def manage_transaction_detail(request, transaction_id):
     selected_transaction = get_transaction_detail(transaction_id)
