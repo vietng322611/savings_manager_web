@@ -70,7 +70,6 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Type</th>
                 <th>Duration</th>
                 <th>Interest Rate</th>
                 <th>Status</th>
@@ -84,13 +83,6 @@
                     <span class="plan-id">
                         {{ saving_type.name }}
                     </span>
-                </td>
-                <td>
-                    {% if saving_type.is_flexible %}
-                        Flexible
-                    {% else %}
-                        Fixed-Term
-                    {% endif %}
                 </td>
                 <td>
                     {% if saving_type.is_flexible %}
