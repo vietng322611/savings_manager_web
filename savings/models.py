@@ -160,10 +160,9 @@ class SavingPlan(models.Model):
         self.save(update_fields=["status", "start_date"])
 
     def soft_delete(self):
-        if self.status == SavingPlanStatus.ACTIVE:
-            self.status = SavingPlanStatus.CLOSED
-            self.deactivated_at = timezone.now()
-            self.save(update_fields=["status", "deactivated_at"])
+        self.status = SavingPlanStatus.CLOSED
+        self.deactivated_at = timezone.now()
+        self.save(update_fields=["status", "deactivated_at"])
 
     def save(self, *args, **kwargs):
         if not self.pk:

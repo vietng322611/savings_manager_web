@@ -45,20 +45,12 @@
             <div class="detail-item">
                 <div class="detail-label">Duration (Months)</div>
                 {{ form.duration_months }}
-                {% if form.duration_months.errors %}
-                    <div class="error-message">
-                        {{ form.duration_months.errors.0 }}
-                    </div>
-                {% endif %}
+                {{ form.duration_months.errors }}
             </div>
             <div class="detail-item detail-wide">
                 <div class="detail-label">Interest Rate (%)</div>
                 {{ form.interest_rate }}
-                {% if form.interest_rate.errors %}
-                    <div class="error-message">
-                        {{ form.interest_rate.errors.0 }}
-                    </div>
-                {% endif %}
+                {{ form.interest_rate.errors }}
             </div>
         </div>
 
