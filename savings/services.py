@@ -407,8 +407,7 @@ def process_transaction(txn: Transaction, new_status: TransactionStatus) -> Tran
             txn.save(update_fields=["status"])
             if txn.transaction_type == TransactionType.OPEN:
                 saving_plan = txn.saving_plan
-                saving_plan.status = SavingPlanStatus.CLOSED
-                saving_plan.save(update_fields=["status"])
+                saving_plan.soft_delete()
             return txn
 
         if new_status != TransactionStatus.SUCCESS:
