@@ -140,7 +140,7 @@ def manage_saving_plan_detail(request, plan_id):
 def manage_saving_types(request):
     saving_types = search_saving_types(
         query=request.GET.get("search", ""),
-        is_active=request.GET.get("status", "") == "active",
+        is_active=request.GET.get("status", ""),
     )
 
     return render(request, "employees/savings/saving_types.html", {
